@@ -288,6 +288,8 @@ def get_rag_chain(retriever, preferred_provider):
                     xai_model = st.secrets.get("XAI_MODEL", "grok-2-latest")
 
                     available_models = None
+                    xai_models_status = None
+                    xai_models_body = None
                     try:
                         resp = requests.get(
                             "https://api.x.ai/v1/models",
@@ -297,18 +299,44 @@ def get_rag_chain(retriever, preferred_provider):
                             },
                             timeout=15,
                         )
-                        if resp.status_code == 200:
-                            data = resp.json()
-                            ids = []
-                            for item in data.get("data", []):
-                                mid = item.get("id")
-                                if mid:
-                                    ids.append(mid)
-                            available_models = ids
-                    except Exception as e:
-                        print(f"XAI: No se pudo consultar /models para validar el modelo: {e}")
+                        xai_models_status = resp.status_code
+                        xai_models_body = resp.text
 
-                    if available_models is not None and xai_model not in available_models:
+                        if preferred_provider == "XAI":
+                            with st.expander("Diagnóstico XAI (/v1/models)", expanded=True):
+                                st.write(f"Status: {xai_models_status}")
+                                st.code(xai_models_body or "", language="json")
+
+                        if resp.status_code != 200:
+                            raise Exception(
+                                f"XAI /models failed. HTTP {resp.status_code}: {resp.text}"
+                            )
+
+                        data = resp.json()
+                        ids = []
+                        for item in data.get("data", []):
+                            mid = item.get("id")
+                            if mid:
+                                ids.append(mid)
+                        available_models = ids
+
+                        if preferred_provider == "XAI" and available_models:
+                            with st.expander("Modelos XAI disponibles (IDs)", expanded=True):
+                                st.write("Copia uno de estos IDs y pégalo en `XAI_MODEL` (Secrets).")
+                                st.code("\n".join(available_models), language="text")
+                    except Exception as e:
+                        raise Exception(
+                            "No se pudo consultar /models de XAI para obtener los modelos disponibles. "
+                            f"Detalle: {e}"
+                        )
+
+                    if not available_models:
+                        raise Exception(
+                            "XAI /models devolvió una lista vacía; no se puede validar XAI_MODEL. "
+                            "Revisa en la consola de xAI qué modelos están habilitados para tu API key."
+                        )
+
+                    if xai_model not in available_models:
                         sample = ", ".join(available_models[:10])
                         raise Exception(
                             f"Model not found: {xai_model}. Modelos disponibles (muestra): {sample}. "
