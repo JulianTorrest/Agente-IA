@@ -4,6 +4,7 @@ import os
 import re
 import requests
 from io import BytesIO
+import time
 from langchain_mistralai import MistralAIEmbeddings, ChatMistralAI
 from langchain_groq import ChatGroq
 from langchain_xai.chat_models import ChatXAI
@@ -755,7 +756,32 @@ with tab6:
 
                 with st.chat_message("assistant"):
                     with st.spinner("Pensando..."):
-                        response_text = st.session_state.conversation_chain.invoke(prompt)
+                        response_text = None
+                        last_error = None
+
+                        for attempt in range(3):
+                            try:
+                                response_text = st.session_state.conversation_chain.invoke(prompt)
+                                break
+                            except Exception as e:
+                                last_error = e
+
+                                is_rate_limit = False
+                                try:
+                                    is_rate_limit = isinstance(e, openai.RateLimitError)
+                                except Exception:
+                                    pass
+
+                                if (not is_rate_limit) and ("RateLimitError" not in str(type(e))):
+                                    raise
+
+                                wait_s = 2 ** attempt
+                                print(f"OpenAI RateLimitError. Reintentando en {wait_s}s (intento {attempt + 1}/3): {e}")
+                                time.sleep(wait_s)
+
+                        if response_text is None:
+                            st.error(f"OpenAI: Rate limit (429) tras reintentos. Intenta de nuevo en 1-2 minutos. Detalle: {last_error}")
+                            raise last_error
                         
                         # Procesar para generar imágenes si se solicita
                         image_tag_match = re.search(r"\[IMAGE:\s*(.*?)\]", response_text)
