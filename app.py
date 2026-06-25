@@ -288,6 +288,7 @@ def get_rag_chain(retriever, preferred_provider):
                 elif provider == "DeepSeek" and st.secrets.get("DEEPSEEK_API_KEY"):
                     # Usar requests directo como en tu proyecto CAMACOL
                     def deepseek_invoke(messages):
+                        print(f"DEBUG: Invocando DeepSeek con mensajes: {messages}")
                         url = "https://api.deepseek.com/v1/chat/completions"
                         headers = {
                             'Content-Type': 'application/json',
@@ -299,12 +300,19 @@ def get_rag_chain(retriever, preferred_provider):
                             "temperature": 0.7,
                             "max_tokens": 2000
                         }
+                        print(f"DEBUG: Enviando request a {url}")
+                        print(f"DEBUG: Payload: {payload}")
                         response = requests.post(url, headers=headers, json=payload, timeout=30)
+                        print(f"DEBUG: Response status: {response.status_code}")
+                        print(f"DEBUG: Response text: {response.text}")
+                        
                         if response.status_code == 200:
                             data = response.json()
+                            print(f"DEBUG: Response JSON: {data}")
                             return data['choices'][0]['message']['content']
                         else:
                             error_msg = f"DeepSeek API Error {response.status_code}: {response.text}"
+                            print(f"DEBUG DeepSeek Error: {error_msg}")  # Debug en logs
                             st.error(error_msg)
                             raise Exception(error_msg)
                     
