@@ -321,6 +321,19 @@ def get_rag_chain(retriever, preferred_provider):
                         
                         async def ainvoke(self, input: Any, config: Optional[Dict[str, Any]] = None, **kwargs: Any) -> str:
                             return self.invoke(input, config, **kwargs)
+                        
+                        def generate_prompt(self, messages: List[BaseMessage], stop: Optional[List[str]] = None, **kwargs: Any) -> str:
+                            """Generate prompt from messages."""
+                            if isinstance(messages, str):
+                                return messages
+                            elif isinstance(messages, list):
+                                return "\n".join(msg.content for msg in messages if hasattr(msg, 'content'))
+                            else:
+                                return str(messages)
+                        
+                        async def agenerate_prompt(self, messages: List[BaseMessage], stop: Optional[List[str]] = None, **kwargs: Any) -> str:
+                            """Async version of generate_prompt."""
+                            return self.generate_prompt(messages, stop, **kwargs)
                     
                     llm = DeepSeekLLM(deepseek_invoke)
                     provider_activo = "DeepSeek"
