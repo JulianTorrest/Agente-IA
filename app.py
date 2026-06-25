@@ -709,15 +709,22 @@ with tab6:
                     
                     # Mostrar qué proveedor se está usando realmente
                     if selected_provider != st.session_state.provider_activo.split(' ')[0]:
-                        st.warning(f"⚠️ {selected_provider} falló. Usando fallback: {st.session_state.provider_activo}")
+                        st.error(f"🚨 {selected_provider} falló. Usando fallback: {st.session_state.provider_activo}")
+                        # Guardar el mensaje en sesión para que persista
+                        st.session_state.fallback_message = f"🚨 {selected_provider} falló. Usando fallback: {st.session_state.provider_activo}"
                     else:
                         st.success(f"✅ Usando {st.session_state.provider_activo}")
+                        st.session_state.fallback_message = None
                 else:
                     st.session_state.conversation_chain = None
         
         if "chat_history" not in st.session_state or st.session_state.get("current_session_key") != session_key:
             st.session_state.chat_history = []
 
+        # Mostrar mensaje de fallback si existe
+        if st.session_state.get("fallback_message"):
+            st.error(st.session_state.fallback_message)
+        
         if st.session_state.conversation_chain:
             # Muestra el historial del chat
             for message in st.session_state.chat_history:
