@@ -24,12 +24,17 @@ st.set_page_config(
     layout="wide",
 )
 
-# --- Rutas a los archivos locales ---
-# Usamos os.path.join para construir las rutas de forma segura.
-BASE_PATH = os.path.join("C:", os.sep, "Users", "1121871773", "OneDrive - agvco", "Documentos", "Agentes Copilot 365")
+# --- Rutas a los archivos ---
+# Para Streamlit Cloud usamos URLs de GitHub, para local usamos rutas locales
+if os.path.exists("logo.png"):
+    LOGO_PATH = "logo.png"
+else:
+    LOGO_PATH = "https://github.com/JulianTorrest/Agente-IA/raw/main/logo.png"
+
+# Documentos locales (si existen)
+BASE_PATH = os.path.dirname(__file__)
 PROMPTS_DOC_PATH = os.path.join(BASE_PATH, "Ingeniería de Prompts.docx")
 MANUAL_DOC_PATH = os.path.join(BASE_PATH, "Manual del Creador de Agentes Copilot 365.docx")
-LOGO_PATH = os.path.join(BASE_PATH, "logo.png")
 
 @st.cache_data
 def leer_documento_docx(path):
