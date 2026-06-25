@@ -286,6 +286,35 @@ def get_rag_chain(retriever, preferred_provider):
                     provider_activo = "Groq (Llama3.3-70b)"
                 elif provider == "XAI" and st.secrets.get("XAI_API_KEY"):
                     xai_model = st.secrets.get("XAI_MODEL", "grok-2-latest")
+
+                    available_models = None
+                    try:
+                        resp = requests.get(
+                            "https://api.x.ai/v1/models",
+                            headers={
+                                "Authorization": f"Bearer {st.secrets['XAI_API_KEY']}",
+                                "Content-Type": "application/json",
+                            },
+                            timeout=15,
+                        )
+                        if resp.status_code == 200:
+                            data = resp.json()
+                            ids = []
+                            for item in data.get("data", []):
+                                mid = item.get("id")
+                                if mid:
+                                    ids.append(mid)
+                            available_models = ids
+                    except Exception as e:
+                        print(f"XAI: No se pudo consultar /models para validar el modelo: {e}")
+
+                    if available_models is not None and xai_model not in available_models:
+                        sample = ", ".join(available_models[:10])
+                        raise Exception(
+                            f"Model not found: {xai_model}. Modelos disponibles (muestra): {sample}. "
+                            "Configura XAI_MODEL en secrets.toml / Streamlit Cloud Secrets con uno de esos IDs."
+                        )
+
                     llm = ChatXAI(api_key=st.secrets["XAI_API_KEY"], model_name=xai_model)
                     provider_activo = f"XAI ({xai_model})"
                 elif provider == "Mistral" and st.secrets.get("MISTRAL_API_KEY"):
