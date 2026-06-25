@@ -33,12 +33,25 @@ st.set_page_config(
     layout="wide",
 )
 
+if "authenticated" not in st.session_state:
+    st.session_state.authenticated = False
+
+if not st.session_state.authenticated:
+    st.title("Acceso")
+    with st.form("login_form"):
+        password = st.text_input("Contraseña", type="password")
+        submitted = st.form_submit_button("Ingresar")
+    if submitted:
+        if password == "IAITAGV2025":
+            st.session_state.authenticated = True
+            st.rerun()
+        else:
+            st.error("Contraseña incorrecta")
+    st.stop()
+
 # --- Rutas a los archivos ---
 # Para Streamlit Cloud usamos URLs de GitHub, para local usamos rutas locales
-if os.path.exists("logo.png"):
-    LOGO_PATH = "logo.png"
-else:
-    LOGO_PATH = "https://github.com/JulianTorrest/Agente-IA/raw/main/logo.png"
+LOGO_PATH = "logo.png" if os.path.exists("logo.png") else None
 
 # URLs de los documentos en GitHub
 GITHUB_PROMPTS_URL = "https://github.com/JulianTorrest/Agente-IA/raw/main/Ingenier%C3%ADa%20de%20Prompts.docx"
@@ -487,6 +500,14 @@ def load_local_css():
         [data-testid="stExpander"] > div:first-child {
             background-color: #f8f9fa;
         }
+
+        /* Ocultar botones superiores (toolbar) en Streamlit Cloud (hack CSS no soportado oficialmente) */
+        [data-testid="stToolbar"],
+        [data-testid="stHeaderActionElements"],
+        [data-testid="stAppToolbar"],
+        header [data-testid="stToolbar"] {
+            display: none !important;
+        }
         </style>
     """, unsafe_allow_html=True)
 
@@ -516,10 +537,8 @@ load_local_css()
 
 col1, col2 = st.columns([1, 4])
 with col1:
-    if os.path.exists(LOGO_PATH):
+    if LOGO_PATH:
         st.image(LOGO_PATH, width=150)
-    else:
-        st.warning("Logo no encontrado.")
 
 with col2:
     st.title("Asistente de Ingeniería de Prompts")
@@ -799,49 +818,65 @@ with tab6:
         # Mostrar mensaje de fallback si existe
         if st.session_state.get("fallback_message"):
             print(st.session_state.fallback_message)
-        
-        if st.session_state.conversation_chain:
-            # Muestra el historial del chat
-            for message in st.session_state.chat_history:
-                with st.chat_message(message["role"]):
-                    st.markdown(message["content"])
 
-            # Input del usuario
-            if prompt := st.chat_input("¿En qué proceso de negocio necesitas ayuda?"):
-                st.session_state.chat_history.append({"role": "user", "content": prompt})
-                with st.chat_message("user"):
-                    st.markdown(prompt)
+        # Muestra el historial del chat (siempre)
+        for message in st.session_state.chat_history:
+            with st.chat_message(message["role"]):
+                st.markdown(message["content"])
 
-                with st.chat_message("assistant"):
-                    with st.spinner("Pensando..."):
-                        response_text = None
-                        last_error = None
+        # Si no hay cadena, se informa pero se mantiene visible el input.
+        if not st.session_state.get("conversation_chain"):
+            st.error("No se pudo inicializar el motor seleccionado. Cambia de proveedor o revisa tus credenciales.")
 
-                        for attempt in range(3):
+        # Input del usuario (siempre visible)
+        try:
+            prompt = st.chat_input(
+                "¿En qué proceso de negocio necesitas ayuda?",
+                disabled=st.session_state.get("conversation_chain") is None,
+            )
+        except TypeError:
+            # Compatibilidad si tu versión de Streamlit no soporta 'disabled'
+            prompt = st.chat_input("¿En qué proceso de negocio necesitas ayuda?")
+
+        if prompt:
+            if not st.session_state.get("conversation_chain"):
+                st.error("El motor seleccionado no está disponible en este momento.")
+                st.stop()
+
+            st.session_state.chat_history.append({"role": "user", "content": prompt})
+            with st.chat_message("user"):
+                st.markdown(prompt)
+
+            with st.chat_message("assistant"):
+                with st.spinner("Pensando..."):
+                    response_text = None
+                    last_error = None
+
+                    for attempt in range(3):
+                        try:
+                            response_text = st.session_state.conversation_chain.invoke(prompt)
+                            break
+                        except Exception as e:
+                            last_error = e
+
+                            is_rate_limit = False
                             try:
-                                response_text = st.session_state.conversation_chain.invoke(prompt)
-                                break
-                            except Exception as e:
-                                last_error = e
+                                is_rate_limit = isinstance(e, openai.RateLimitError)
+                            except Exception:
+                                pass
 
-                                is_rate_limit = False
-                                try:
-                                    is_rate_limit = isinstance(e, openai.RateLimitError)
-                                except Exception:
-                                    pass
+                            if (not is_rate_limit) and ("RateLimitError" not in str(type(e))):
+                                # Para errores distintos a rate limit, mostrar el detalle y no romper toda la app
+                                print(f"LLM invoke error ({st.session_state.get('provider_activo')}): {repr(e)}")
+                                body = getattr(e, "body", None)
+                                if body is not None:
+                                    print(f"LLM error body: {body}")
+                                st.error(f"Error del proveedor {st.session_state.get('provider_activo')}: {e}")
+                                st.stop()
 
-                                if (not is_rate_limit) and ("RateLimitError" not in str(type(e))):
-                                    # Para errores distintos a rate limit, mostrar el detalle y no romper toda la app
-                                    print(f"LLM invoke error ({st.session_state.get('provider_activo')}): {repr(e)}")
-                                    body = getattr(e, "body", None)
-                                    if body is not None:
-                                        print(f"LLM error body: {body}")
-                                    st.error(f"Error del proveedor {st.session_state.get('provider_activo')}: {e}")
-                                    st.stop()
-
-                                wait_s = 2 ** attempt
-                                print(f"OpenAI RateLimitError. Reintentando en {wait_s}s (intento {attempt + 1}/3): {e}")
-                                time.sleep(wait_s)
+                            wait_s = 2 ** attempt
+                            print(f"OpenAI RateLimitError. Reintentando en {wait_s}s (intento {attempt + 1}/3): {e}")
+                            time.sleep(wait_s)
 
                         if response_text is None:
                             st.error(f"OpenAI: Rate limit (429) tras reintentos. Intenta de nuevo en 1-2 minutos. Detalle: {last_error}")
