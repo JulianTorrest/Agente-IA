@@ -268,9 +268,9 @@ def get_rag_chain(retriever, preferred_provider):
         # Orden de intento: el preferido primero, luego el resto.
         all_providers = ["Groq", "XAI", "Mistral", "Gemini", "DeepSeek", "OpenAI"]
 
-        # Si el usuario selecciona explícitamente DeepSeek, NO hacemos fallback silencioso.
-        # Si DeepSeek falla, debe fallar de frente para que el usuario lo vea.
-        strict_provider = preferred_provider in {"DeepSeek"}
+        # Si el usuario selecciona explícitamente un proveedor, NO hacemos fallback silencioso.
+        # Si falla, debe fallar de frente para que el usuario lo vea.
+        strict_provider = preferred_provider in {"DeepSeek", "XAI", "OpenAI"}
         if strict_provider:
             fallback_order = [preferred_provider]
         else:
@@ -285,8 +285,8 @@ def get_rag_chain(retriever, preferred_provider):
                     llm = ChatGroq(groq_api_key=st.secrets["GROQ_API_KEY"], model_name="llama-3.3-70b-versatile")
                     provider_activo = "Groq (Llama3.3-70b)"
                 elif provider == "XAI" and st.secrets.get("XAI_API_KEY"):
-                    llm = ChatOpenAI(api_key=st.secrets["XAI_API_KEY"], model="grok", base_url="https://api.x.ai/v1")
-                    provider_activo = "XAI (Grok)"
+                    llm = ChatOpenAI(api_key=st.secrets["XAI_API_KEY"], model="grok-beta", base_url="https://api.x.ai/v1")
+                    provider_activo = "XAI (Grok-beta)"
                 elif provider == "Mistral" and st.secrets.get("MISTRAL_API_KEY"):
                     llm = ChatMistralAI(mistral_api_key=st.secrets["MISTRAL_API_KEY"], model="mistral-large-latest")
                     provider_activo = "Mistral"
@@ -781,7 +781,7 @@ with tab6:
 
                         if response_text is None:
                             st.error(f"OpenAI: Rate limit (429) tras reintentos. Intenta de nuevo en 1-2 minutos. Detalle: {last_error}")
-                            raise last_error
+                            st.stop()
                         
                         # Procesar para generar imágenes si se solicita
                         image_tag_match = re.search(r"\[IMAGE:\s*(.*?)\]", response_text)
