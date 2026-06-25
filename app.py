@@ -226,59 +226,30 @@ def get_retriever():
 
 # Definir la clase DeepSeekLLM fuera de la función para evitar problemas de ámbito
 
-class DeepSeekLLM(BaseLanguageModel):
+class DeepSeekLLM:
+    """Wrapper simple para DeepSeek que funciona con LangChain"""
     def __init__(self, invoke_func):
-        super().__init__()
-        self.invoke_func = invoke_func
+        self._invoke_func = invoke_func
     
-    def _generate(self, messages: List[BaseMessage], stop: Optional[List[str]] = None, run_manager: Optional[Any] = None, **kwargs: Any) -> LLMResult:
-        # Convertir mensajes a formato de la API
-        api_messages = []
-        for msg in messages:
-            if isinstance(msg, HumanMessage):
-                api_messages.append({"role": "user", "content": msg.content})
-            else:
-                api_messages.append({"role": "assistant", "content": msg.content})
-        
-        response = self.invoke_func(api_messages)
-        
-        # Crear generación
-        from langchain_core.outputs import Generation
-        generation = Generation(text=response)
-        return LLMResult(generations=[[generation]])
-    
-    def _llm_type(self) -> str:
-        return "deepseek"
-    
-    def invoke(self, input: Any, config: Optional[Dict[str, Any]] = None, **kwargs: Any) -> str:
-        if isinstance(input, str):
-            return self.invoke_func([{"role": "user", "content": input}])
-        elif isinstance(input, list) and input and isinstance(input[0], BaseMessage):
+    def invoke(self, input_text, config=None, **kwargs):
+        """Método principal que LangChain usa"""
+        if isinstance(input_text, str):
+            return self._invoke_func([{"role": "user", "content": input_text}])
+        elif isinstance(input_text, list):
+            # Convertir mensajes LangChain a formato API
             api_messages = []
-            for msg in input:
-                if isinstance(msg, HumanMessage):
+            for msg in input_text:
+                if hasattr(msg, 'content'):
                     api_messages.append({"role": "user", "content": msg.content})
                 else:
-                    api_messages.append({"role": "assistant", "content": msg.content})
-            return self.invoke_func(api_messages)
+                    api_messages.append({"role": "user", "content": str(msg)})
+            return self._invoke_func(api_messages)
         else:
-            return str(input)
+            return self._invoke_func([{"role": "user", "content": str(input_text)}])
     
-    async def ainvoke(self, input: Any, config: Optional[Dict[str, Any]] = None, **kwargs: Any) -> str:
-        return self.invoke(input, config, **kwargs)
-    
-    def generate_prompt(self, messages: List[BaseMessage], stop: Optional[List[str]] = None, **kwargs: Any) -> str:
-        """Generate prompt from messages."""
-        if isinstance(messages, str):
-            return messages
-        elif isinstance(messages, list):
-            return "\n".join(msg.content for msg in messages if hasattr(msg, 'content'))
-        else:
-            return str(messages)
-    
-    async def agenerate_prompt(self, messages: List[BaseMessage], stop: Optional[List[str]] = None, **kwargs: Any) -> str:
-        """Async version of generate_prompt."""
-        return self.generate_prompt(messages, stop, **kwargs)
+    def __call__(self, input_text, config=None, **kwargs):
+        """Hacer el objeto callable"""
+        return self.invoke(input_text, config, **kwargs)
 
 def get_rag_chain(retriever, preferred_provider):
     """
