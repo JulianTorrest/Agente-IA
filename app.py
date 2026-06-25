@@ -706,6 +706,12 @@ with tab6:
                 if result:
                     st.session_state.conversation_chain, st.session_state.provider_activo = result
                     st.session_state.current_session_key = session_key
+                    
+                    # Mostrar qué proveedor se está usando realmente
+                    if selected_provider != st.session_state.provider_activo.split(' ')[0]:
+                        st.warning(f"⚠️ {selected_provider} falló. Usando fallback: {st.session_state.provider_activo}")
+                    else:
+                        st.success(f"✅ Usando {st.session_state.provider_activo}")
                 else:
                     st.session_state.conversation_chain = None
         
