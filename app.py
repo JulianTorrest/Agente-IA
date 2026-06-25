@@ -269,9 +269,15 @@ def get_rag_chain(retriever, preferred_provider):
         # Crea una nueva lista ordenada con el proveedor preferido al principio.
         # Esto es más limpio que modificar la lista original y elimina la advertencia.
         fallback_order = [preferred_provider] + [p for p in all_providers if p != preferred_provider]
+        
+        print(f"DEBUG: preferred_provider = {preferred_provider}")
+        print(f"DEBUG: fallback_order = {fallback_order}")
 
         for provider in fallback_order:
-            if llm: break # Si ya tenemos un LLM, salimos del bucle
+            print(f"DEBUG: Intentando proveedor: {provider}")
+            if llm: 
+                print(f"DEBUG: Ya tenemos un LLM, rompiendo el bucle")
+                break
             try:
                 if provider == "Groq" and st.secrets.get("GROQ_API_KEY"):
                     llm = ChatGroq(groq_api_key=st.secrets["GROQ_API_KEY"], model_name="llama-3.3-70b-versatile")
@@ -306,7 +312,7 @@ def get_rag_chain(retriever, preferred_provider):
                     
                     # Si la prueba falla, mostrar error claro y no continuar
                     if not test_deepseek_api():
-                        st.error("🚨 La API key de DeepSeek falló la prueba de conexión. Verifica la API key o el saldo.")
+                        print("🚨 La API key de DeepSeek falló la prueba de conexión. Verifica la API key o el saldo.")
                         raise Exception("DeepSeek API key validation failed")
                     
                     # Usar requests directo como en tu proyecto CAMACOL
@@ -335,8 +341,7 @@ def get_rag_chain(retriever, preferred_provider):
                             return data['choices'][0]['message']['content']
                         else:
                             error_msg = f"DeepSeek API Error {response.status_code}: {response.text}"
-                            print(f"DEBUG DeepSeek Error: {error_msg}")  # Debug en logs
-                            st.error(error_msg)
+                            print(f"DEBUG DeepSeek Error: {error_msg}")
                             raise Exception(error_msg)
                     
                     llm = DeepSeekLLM(deepseek_invoke)
@@ -345,11 +350,11 @@ def get_rag_chain(retriever, preferred_provider):
                     llm = ChatOpenAI(api_key=st.secrets["OPENAI_API_KEY"], model="gpt-4o-mini", temperature=0.7, base_url="https://api.openai.com/v1")
                     provider_activo = "OpenAI (GPT-4o-mini)"
             except Exception as e:
-                st.warning(f"No se pudo inicializar el proveedor '{provider}': {e}. Intentando con el siguiente.")
+                print(f"No se pudo inicializar el proveedor '{provider}': {e}. Intentando con el siguiente.")
                 continue
 
         if not llm:
-            st.error("No se pudo inicializar ningún LLM. Verifica tus API keys en el archivo secrets.toml.")
+            print("No se pudo inicializar ningún LLM. Verifica tus API keys en el archivo secrets.toml.")
             return None
 
         # 5. Crear la cadena conversacional con LCEL (LangChain Expression Language)
@@ -713,11 +718,11 @@ with tab6:
                     
                     # Mostrar qué proveedor se está usando realmente
                     if selected_provider != st.session_state.provider_activo.split(' ')[0]:
-                        st.error(f"🚨 {selected_provider} falló. Usando fallback: {st.session_state.provider_activo}")
+                        print(f"🚨 {selected_provider} falló. Usando fallback: {st.session_state.provider_activo}")
                         # Guardar el mensaje en sesión para que persista
                         st.session_state.fallback_message = f"🚨 {selected_provider} falló. Usando fallback: {st.session_state.provider_activo}"
                     else:
-                        st.success(f"✅ Usando {st.session_state.provider_activo}")
+                        print(f"✅ Usando {st.session_state.provider_activo}")
                         st.session_state.fallback_message = None
                 else:
                     st.session_state.conversation_chain = None
@@ -727,7 +732,7 @@ with tab6:
 
         # Mostrar mensaje de fallback si existe
         if st.session_state.get("fallback_message"):
-            st.error(st.session_state.fallback_message)
+            print(st.session_state.fallback_message)
         
         if st.session_state.conversation_chain:
             # Muestra el historial del chat
