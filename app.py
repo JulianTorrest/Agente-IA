@@ -255,12 +255,40 @@ def get_rag_chain(retriever, preferred_provider):
                     llm = ChatGoogleGenerativeAI(google_api_key=st.secrets["GEMINI_API_KEY"], model="gemini-1.5-flash", temperature=0.7)
                     provider_activo = "Gemini (Capa Gratuita)"
                 elif provider == "DeepSeek" and st.secrets.get("DEEPSEEK_API_KEY"):
-                    llm = ChatOpenAI(
-                        api_key=st.secrets["DEEPSEEK_API_KEY"], 
-                        model="deepseek-chat", 
-                        temperature=0.7, 
-                        base_url="https://api.deepseek.com/v1"
-                    )
+                    # Usar requests directo como en tu proyecto CAMACOL
+                    def deepseek_invoke(messages):
+                        url = "https://api.deepseek.com/v1/chat/completions"
+                        headers = {
+                            'Content-Type': 'application/json',
+                            'Authorization': f"Bearer {st.secrets['DEEPSEEK_API_KEY']}"
+                        }
+                        payload = {
+                            "model": "deepseek-chat",
+                            "messages": messages,
+                            "temperature": 0.7,
+                            "max_tokens": 2000
+                        }
+                        response = requests.post(url, headers=headers, json=payload, timeout=30)
+                        if response.status_code == 200:
+                            data = response.json()
+                            return data['choices'][0]['message']['content']
+                        else:
+                            raise Exception(f"DeepSeek API Error: {response.status_code} - {response.text}")
+                    
+                    # Crear un wrapper compatible con LangChain
+                    class DeepSeekLLM:
+                        def __init__(self, invoke_func):
+                            self.invoke_func = invoke_func
+                        
+                        def invoke(self, input_text, config=None):
+                            # Convertir input a formato de mensajes
+                            if isinstance(input_text, str):
+                                messages = [{"role": "user", "content": input_text}]
+                            else:
+                                messages = input_text
+                            return self.invoke_func(messages)
+                    
+                    llm = DeepSeekLLM(deepseek_invoke)
                     provider_activo = "DeepSeek"
                 elif provider == "OpenAI" and st.secrets.get("OPENAI_API_KEY"):
                     llm = ChatOpenAI(api_key=st.secrets["OPENAI_API_KEY"], model="gpt-4o-mini", temperature=0.7, base_url="https://api.openai.com/v1")
