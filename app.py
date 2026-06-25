@@ -10,6 +10,7 @@ from langchain_xai.chat_models import ChatXAI
 from langchain_core.globals import set_llm_cache
 from langchain_community.cache import InMemoryCache
 from langchain_google_genai import GoogleGenerativeAIEmbeddings, ChatGoogleGenerativeAI
+from langchain_openai import ChatOpenAI
 from langchain_community.vectorstores import FAISS
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langchain_core.prompts import ChatPromptTemplate
@@ -232,7 +233,7 @@ def get_rag_chain(retriever, preferred_provider):
         provider_activo = None
         
         # Orden de intento: el preferido primero, luego el resto.
-        all_providers = ["Groq", "XAI", "Mistral", "Gemini"]
+        all_providers = ["Groq", "XAI", "Mistral", "Gemini", "DeepSeek", "OpenAI"]
         # Crea una nueva lista ordenada con el proveedor preferido al principio.
         # Esto es más limpio que modificar la lista original y elimina la advertencia.
         fallback_order = [preferred_provider] + [p for p in all_providers if p != preferred_provider]
@@ -252,6 +253,12 @@ def get_rag_chain(retriever, preferred_provider):
                 elif provider == "Gemini" and st.secrets.get("GEMINI_API_KEY"):
                     llm = ChatGoogleGenerativeAI(google_api_key=st.secrets["GEMINI_API_KEY"], model="gemini-1.5-flash", temperature=0.7)
                     provider_activo = "Gemini (Capa Gratuita)"
+                elif provider == "DeepSeek" and st.secrets.get("DEEPSEEK_API_KEY"):
+                    llm = ChatOpenAI(api_key=st.secrets["DEEPSEEK_API_KEY"], model="deepseek-chat", temperature=0.7, base_url="https://api.deepseek.com")
+                    provider_activo = "DeepSeek"
+                elif provider == "OpenAI" and st.secrets.get("OPENAI_API_KEY"):
+                    llm = ChatOpenAI(api_key=st.secrets["OPENAI_API_KEY"], model="gpt-4o-mini", temperature=0.7)
+                    provider_activo = "OpenAI (GPT-4o-mini)"
             except Exception as e:
                 st.warning(f"No se pudo inicializar el proveedor '{provider}': {e}. Intentando con el siguiente.")
                 continue
@@ -603,7 +610,7 @@ with tab6:
     st.markdown("Chatea con un asistente experto para diseñar el prompt perfecto para tu necesidad de negocio.")
 
     # Opciones de proveedores de LLM
-    provider_options = ["Groq", "XAI", "Mistral", "Gemini"]
+    provider_options = ["Groq", "XAI", "Mistral", "Gemini", "DeepSeek", "OpenAI"]
     selected_provider = st.selectbox("Selecciona tu motor de IA preferido:", provider_options)
 
     # Cargar el retriever una sola vez y cachearlo
