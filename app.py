@@ -304,7 +304,9 @@ def get_rag_chain(retriever, preferred_provider):
                             data = response.json()
                             return data['choices'][0]['message']['content']
                         else:
-                            raise Exception(f"DeepSeek API Error: {response.status_code} - {response.text}")
+                            error_msg = f"DeepSeek API Error {response.status_code}: {response.text}"
+                            st.error(error_msg)
+                            raise Exception(error_msg)
                     
                     llm = DeepSeekLLM(deepseek_invoke)
                     provider_activo = "DeepSeek"
