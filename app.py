@@ -11,6 +11,7 @@ from langchain_core.globals import set_llm_cache
 from langchain_community.cache import InMemoryCache
 from langchain_google_genai import GoogleGenerativeAIEmbeddings, ChatGoogleGenerativeAI
 from langchain_openai import ChatOpenAI
+from langchain_deepseek import ChatDeepSeek
 from langchain_community.vectorstores import FAISS
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langchain_core.prompts import ChatPromptTemplate
@@ -255,7 +256,7 @@ def get_rag_chain(retriever, preferred_provider):
                     provider_activo = "Gemini (Capa Gratuita)"
                 elif provider == "DeepSeek" and st.secrets.get("DEEPSEEK_API_KEY"):
                     try:
-                        llm = ChatOpenAI(api_key=st.secrets["DEEPSEEK_API_KEY"], model="deepseek-chat", temperature=0.7, base_url="https://api.deepseek.com/v1")
+                        llm = ChatDeepSeek(api_key=st.secrets["DEEPSEEK_API_KEY"], model="deepseek-chat", temperature=0.7)
                         provider_activo = "DeepSeek"
                     except Exception as e:
                         st.warning(f"Error específico con DeepSeek: {e}")
