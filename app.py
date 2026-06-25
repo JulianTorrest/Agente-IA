@@ -266,17 +266,18 @@ def get_rag_chain(retriever, preferred_provider):
         
         # Orden de intento: el preferido primero, luego el resto.
         all_providers = ["Groq", "XAI", "Mistral", "Gemini", "DeepSeek", "OpenAI"]
-        # Crea una nueva lista ordenada con el proveedor preferido al principio.
-        # Esto es más limpio que modificar la lista original y elimina la advertencia.
-        fallback_order = [preferred_provider] + [p for p in all_providers if p != preferred_provider]
-        
-        print(f"DEBUG: preferred_provider = {preferred_provider}")
-        print(f"DEBUG: fallback_order = {fallback_order}")
+
+        # Si el usuario selecciona explícitamente DeepSeek, NO hacemos fallback silencioso.
+        # Si DeepSeek falla, debe fallar de frente para que el usuario lo vea.
+        strict_provider = preferred_provider in {"DeepSeek"}
+        if strict_provider:
+            fallback_order = [preferred_provider]
+        else:
+            # Crea una nueva lista ordenada con el proveedor preferido al principio.
+            fallback_order = [preferred_provider] + [p for p in all_providers if p != preferred_provider]
 
         for provider in fallback_order:
-            print(f"DEBUG: Intentando proveedor: {provider}")
-            if llm: 
-                print(f"DEBUG: Ya tenemos un LLM, rompiendo el bucle")
+            if llm:
                 break
             try:
                 if provider == "Groq" and st.secrets.get("GROQ_API_KEY"):
@@ -350,7 +351,10 @@ def get_rag_chain(retriever, preferred_provider):
                     llm = ChatOpenAI(api_key=st.secrets["OPENAI_API_KEY"], model="gpt-4o-mini", temperature=0.7, base_url="https://api.openai.com/v1")
                     provider_activo = "OpenAI (GPT-4o-mini)"
             except Exception as e:
-                print(f"No se pudo inicializar el proveedor '{provider}': {e}. Intentando con el siguiente.")
+                print(f"No se pudo inicializar el proveedor '{provider}': {e}.")
+                if strict_provider:
+                    raise
+                print("Intentando con el siguiente.")
                 continue
 
         if not llm:
