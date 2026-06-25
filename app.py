@@ -304,6 +304,23 @@ def get_rag_chain(retriever, preferred_provider):
                         
                         def _llm_type(self) -> str:
                             return "deepseek"
+                        
+                        def invoke(self, input: Any, config: Optional[Dict[str, Any]] = None, **kwargs: Any) -> str:
+                            if isinstance(input, str):
+                                return self.invoke_func([{"role": "user", "content": input}])
+                            elif isinstance(input, list) and input and isinstance(input[0], BaseMessage):
+                                api_messages = []
+                                for msg in input:
+                                    if isinstance(msg, HumanMessage):
+                                        api_messages.append({"role": "user", "content": msg.content})
+                                    else:
+                                        api_messages.append({"role": "assistant", "content": msg.content})
+                                return self.invoke_func(api_messages)
+                            else:
+                                return str(input)
+                        
+                        async def ainvoke(self, input: Any, config: Optional[Dict[str, Any]] = None, **kwargs: Any) -> str:
+                            return self.invoke(input, config, **kwargs)
                     
                     llm = DeepSeekLLM(deepseek_invoke)
                     provider_activo = "DeepSeek"
