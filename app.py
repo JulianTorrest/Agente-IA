@@ -23,7 +23,7 @@ from vertexai.preview.vision_models import ImageGenerationModel
 
 # --- Configuración de la Aplicación ---
 st.set_page_config(
-    page_title="Visor de Documentos de Prompt Engineering",
+    page_title="Asistente de Ingeniería de Prompts",
     page_icon=None,
     layout="wide",
 )
@@ -434,8 +434,8 @@ with col1:
         st.warning("Logo no encontrado.")
 
 with col2:
-    st.title("Visor de Documentos de AGV Open Market")
-    st.write("Una herramienta para explorar la documentación de Ingeniería de Prompts y manuales de agentes.")
+    st.title("Asistente de Ingeniería de Prompts")
+    st.write("Una herramienta inteligente para diseñar prompts perfectos y explorar metodologías de IA.")
 
 tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs(["Prompt Efectivo", "Metodologías", "System Prompts", "Conocimiento", "Ejemplos para el Asistente", "Asistente de Prompts"])
 
