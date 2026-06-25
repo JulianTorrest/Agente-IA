@@ -13,6 +13,10 @@ from langchain_google_genai import GoogleGenerativeAIEmbeddings, ChatGoogleGener
 from langchain_openai import ChatOpenAI
 from langchain_community.vectorstores import FAISS
 import openai
+from langchain_core.language_models import BaseLanguageModel
+from langchain_core.messages import BaseMessage, HumanMessage
+from langchain_core.outputs import LLMResult
+from typing import List, Optional, Any, Dict
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.runnables import RunnablePassthrough
@@ -221,10 +225,6 @@ def get_retriever():
         return None
 
 # Definir la clase DeepSeekLLM fuera de la función para evitar problemas de ámbito
-from langchain_core.language_models import BaseLanguageModel
-from langchain_core.messages import BaseMessage, HumanMessage
-from langchain_core.outputs import LLMResult
-from typing import List, Optional, Any, Dict
 
 class DeepSeekLLM(BaseLanguageModel):
     def __init__(self, invoke_func):
