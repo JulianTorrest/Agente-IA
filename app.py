@@ -285,7 +285,7 @@ def get_rag_chain(retriever, preferred_provider):
                     llm = ChatGroq(groq_api_key=st.secrets["GROQ_API_KEY"], model_name="llama-3.3-70b-versatile")
                     provider_activo = "Groq (Llama3.3-70b)"
                 elif provider == "XAI" and st.secrets.get("XAI_API_KEY"):
-                    llm = ChatOpenAI(api_key=st.secrets["XAI_API_KEY"], model="grok-beta", base_url="https://api.x.ai/v1")
+                    llm = ChatXAI(api_key=st.secrets["XAI_API_KEY"], model_name="grok-beta")
                     provider_activo = "XAI (Grok-beta)"
                 elif provider == "Mistral" and st.secrets.get("MISTRAL_API_KEY"):
                     llm = ChatMistralAI(mistral_api_key=st.secrets["MISTRAL_API_KEY"], model="mistral-large-latest")
@@ -773,7 +773,13 @@ with tab6:
                                     pass
 
                                 if (not is_rate_limit) and ("RateLimitError" not in str(type(e))):
-                                    raise
+                                    # Para errores distintos a rate limit, mostrar el detalle y no romper toda la app
+                                    print(f"LLM invoke error ({st.session_state.get('provider_activo')}): {repr(e)}")
+                                    body = getattr(e, "body", None)
+                                    if body is not None:
+                                        print(f"LLM error body: {body}")
+                                    st.error(f"Error del proveedor {st.session_state.get('provider_activo')}: {e}")
+                                    st.stop()
 
                                 wait_s = 2 ** attempt
                                 print(f"OpenAI RateLimitError. Reintentando en {wait_s}s (intento {attempt + 1}/3): {e}")
