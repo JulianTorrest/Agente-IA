@@ -2,6 +2,8 @@ import streamlit as st
 import docx
 import os
 import re
+import requests
+from io import BytesIO
 from langchain_mistralai import MistralAIEmbeddings, ChatMistralAI
 from langchain_groq import ChatGroq
 from langchain_xai.chat_models import ChatXAI
@@ -31,16 +33,52 @@ if os.path.exists("logo.png"):
 else:
     LOGO_PATH = "https://github.com/JulianTorrest/Agente-IA/raw/main/logo.png"
 
+# URLs de los documentos en GitHub
+GITHUB_PROMPTS_URL = "https://github.com/JulianTorrest/Agente-IA/raw/main/Ingenier%C3%ADa%20de%20Prompts.docx"
+GITHUB_MANUAL_URL = "https://github.com/JulianTorrest/Agente-IA/raw/main/Manual%20del%20Creador%20de%20Agentes%20Copilot%20365.docx"
+
 # Documentos locales (si existen)
 BASE_PATH = os.path.dirname(__file__)
 PROMPTS_DOC_PATH = os.path.join(BASE_PATH, "Ingeniería de Prompts.docx")
 MANUAL_DOC_PATH = os.path.join(BASE_PATH, "Manual del Creador de Agentes Copilot 365.docx")
 
 @st.cache_data
+def descargar_documento_desde_github(url, filename):
+    """Descarga un documento .docx desde GitHub."""
+    try:
+        response = requests.get(url)
+        response.raise_for_status()
+        return BytesIO(response.content)
+    except Exception as e:
+        st.error(f"Error descargando {filename} desde GitHub: {e}")
+        return None
+
+@st.cache_data
 def leer_documento_docx(path):
-    """Lee un archivo .docx desde una ruta local y devuelve el texto."""
+    """Lee un archivo .docx desde una ruta local o GitHub y devuelve el texto."""
+    # Si no existe localmente, intentar descargar desde GitHub
     if not os.path.exists(path):
-        return f"**Error:** No se pudo encontrar el archivo en la ruta especificada: `{path}`. Por favor, verifica que el archivo existe."
+        if "Ingeniería de Prompts" in path:
+            github_url = GITHUB_PROMPTS_URL
+            filename = "Ingeniería de Prompts.docx"
+        elif "Manual del Creador" in path:
+            github_url = GITHUB_MANUAL_URL
+            filename = "Manual del Creador de Agentes Copilot 365.docx"
+        else:
+            return f"**Error:** No se pudo encontrar el archivo en la ruta especificada: `{path}`. Por favor, verifica que el archivo existe."
+        
+        # Descargar desde GitHub
+        doc_content = descargar_documento_desde_github(github_url, filename)
+        if doc_content is None:
+            return f"**Error:** No se pudo descargar {filename} desde GitHub."
+        
+        try:
+            doc = docx.Document(doc_content)
+            return "\n".join([para.text for para in doc.paragraphs])
+        except Exception as e:
+            return f"**Error:** Ocurrió un problema al leer el archivo `{filename}`. Detalles: {e}"
+    
+    # Si existe localmente, leerlo directamente
     try:
         doc = docx.Document(path)
         return "\n".join([para.text for para in doc.paragraphs])
@@ -53,11 +91,32 @@ def parsear_documento_metodologias(path):
     Analiza un documento .docx y extrae las metodologías basadas en una estructura
     de títulos numéricos (ej. 3.1, 3.1.1, 3.2).
     """
+    # Si no existe localmente, intentar descargar desde GitHub
     if not os.path.exists(path):
-        return {"error": f"No se pudo encontrar el archivo en la ruta: {path}"}
+        if "Ingeniería de Prompts" in path:
+            github_url = GITHUB_PROMPTS_URL
+            filename = "Ingeniería de Prompts.docx"
+        else:
+            return {"error": f"No se pudo encontrar el archivo en la ruta: {path}"}
+        
+        # Descargar desde GitHub
+        doc_content = descargar_documento_desde_github(github_url, filename)
+        if doc_content is None:
+            return {"error": f"No se pudo descargar {filename} desde GitHub."}
+        
+        try:
+            document = docx.Document(doc_content)
+        except Exception as e:
+            return {"error": f"Ocurrió un problema al leer el archivo `{filename}`: {e}"}
+    else:
+        # Si existe localmente, leerlo directamente
+        try:
+            document = docx.Document(path)
+        except Exception as e:
+            return {"error": f"Ocurrió un problema al leer el archivo `{path}`: {e}"}
     
     try:
-        document = docx.Document(path)
+        # Inicializar variables para el análisis
         metodologias = {}
         metodologia_activa = None
         subseccion_activa = None 
