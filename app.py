@@ -276,17 +276,34 @@ def get_rag_chain(retriever, preferred_provider):
                             raise Exception(f"DeepSeek API Error: {response.status_code} - {response.text}")
                     
                     # Crear un wrapper compatible con LangChain
-                    class DeepSeekLLM:
+                    from langchain_core.language_models import BaseLanguageModel
+                    from langchain_core.messages import BaseMessage, HumanMessage
+                    from langchain_core.outputs import LLMResult
+                    from typing import List, Optional, Any, Dict
+                    
+                    class DeepSeekLLM(BaseLanguageModel):
                         def __init__(self, invoke_func):
+                            super().__init__()
                             self.invoke_func = invoke_func
                         
-                        def invoke(self, input_text, config=None):
-                            # Convertir input a formato de mensajes
-                            if isinstance(input_text, str):
-                                messages = [{"role": "user", "content": input_text}]
-                            else:
-                                messages = input_text
-                            return self.invoke_func(messages)
+                        def _generate(self, messages: List[BaseMessage], stop: Optional[List[str]] = None, run_manager: Optional[Any] = None, **kwargs: Any) -> LLMResult:
+                            # Convertir mensajes a formato de la API
+                            api_messages = []
+                            for msg in messages:
+                                if isinstance(msg, HumanMessage):
+                                    api_messages.append({"role": "user", "content": msg.content})
+                                else:
+                                    api_messages.append({"role": "assistant", "content": msg.content})
+                            
+                            response = self.invoke_func(api_messages)
+                            
+                            # Crear generación
+                            from langchain_core.outputs import Generation
+                            generation = Generation(text=response)
+                            return LLMResult(generations=[[generation]])
+                        
+                        def _llm_type(self) -> str:
+                            return "deepseek"
                     
                     llm = DeepSeekLLM(deepseek_invoke)
                     provider_activo = "DeepSeek"
