@@ -242,8 +242,8 @@ def get_rag_chain(retriever, preferred_provider):
             if llm: break # Si ya tenemos un LLM, salimos del bucle
             try:
                 if provider == "Groq" and st.secrets.get("GROQ_API_KEY"):
-                    llm = ChatGroq(groq_api_key=st.secrets["GROQ_API_KEY"], model_name="llama3-70b-8192")
-                    provider_activo = "Groq (Llama3-70b)"
+                    llm = ChatGroq(groq_api_key=st.secrets["GROQ_API_KEY"], model_name="llama-3.1-70b-versatile")
+                    provider_activo = "Groq (Llama3.1-70b)"
                 elif provider == "XAI" and st.secrets.get("XAI_API_KEY"):
                     llm = ChatXAI(api_key=st.secrets["XAI_API_KEY"], model_name="grok-1")
                     provider_activo = "XAI (Grok-1)"
