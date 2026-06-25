@@ -33,6 +33,20 @@ st.set_page_config(
     layout="wide",
 )
 
+st.markdown(
+    """
+    <style>
+    [data-testid="stToolbar"],
+    [data-testid="stHeaderActionElements"],
+    [data-testid="stAppToolbar"],
+    header [data-testid="stToolbar"] {
+        display: none !important;
+    }
+    </style>
+    """,
+    unsafe_allow_html=True,
+)
+
 if "authenticated" not in st.session_state:
     st.session_state.authenticated = False
 
