@@ -220,6 +220,66 @@ def get_retriever():
         st.error(f"Error crítico al crear el retriever: {e}")
         return None
 
+# Definir la clase DeepSeekLLM fuera de la función para evitar problemas de ámbito
+from langchain_core.language_models import BaseLanguageModel
+from langchain_core.messages import BaseMessage, HumanMessage
+from langchain_core.outputs import LLMResult
+from typing import List, Optional, Any, Dict
+
+class DeepSeekLLM(BaseLanguageModel):
+    def __init__(self, invoke_func):
+        super().__init__()
+        self.invoke_func = invoke_func
+    
+    def _generate(self, messages: List[BaseMessage], stop: Optional[List[str]] = None, run_manager: Optional[Any] = None, **kwargs: Any) -> LLMResult:
+        # Convertir mensajes a formato de la API
+        api_messages = []
+        for msg in messages:
+            if isinstance(msg, HumanMessage):
+                api_messages.append({"role": "user", "content": msg.content})
+            else:
+                api_messages.append({"role": "assistant", "content": msg.content})
+        
+        response = self.invoke_func(api_messages)
+        
+        # Crear generación
+        from langchain_core.outputs import Generation
+        generation = Generation(text=response)
+        return LLMResult(generations=[[generation]])
+    
+    def _llm_type(self) -> str:
+        return "deepseek"
+    
+    def invoke(self, input: Any, config: Optional[Dict[str, Any]] = None, **kwargs: Any) -> str:
+        if isinstance(input, str):
+            return self.invoke_func([{"role": "user", "content": input}])
+        elif isinstance(input, list) and input and isinstance(input[0], BaseMessage):
+            api_messages = []
+            for msg in input:
+                if isinstance(msg, HumanMessage):
+                    api_messages.append({"role": "user", "content": msg.content})
+                else:
+                    api_messages.append({"role": "assistant", "content": msg.content})
+            return self.invoke_func(api_messages)
+        else:
+            return str(input)
+    
+    async def ainvoke(self, input: Any, config: Optional[Dict[str, Any]] = None, **kwargs: Any) -> str:
+        return self.invoke(input, config, **kwargs)
+    
+    def generate_prompt(self, messages: List[BaseMessage], stop: Optional[List[str]] = None, **kwargs: Any) -> str:
+        """Generate prompt from messages."""
+        if isinstance(messages, str):
+            return messages
+        elif isinstance(messages, list):
+            return "\n".join(msg.content for msg in messages if hasattr(msg, 'content'))
+        else:
+            return str(messages)
+    
+    async def agenerate_prompt(self, messages: List[BaseMessage], stop: Optional[List[str]] = None, **kwargs: Any) -> str:
+        """Async version of generate_prompt."""
+        return self.generate_prompt(messages, stop, **kwargs)
+
 def get_rag_chain(retriever, preferred_provider):
     """
     Crea la cadena RAG con el LLM seleccionado y el retriever cacheado.
@@ -274,66 +334,6 @@ def get_rag_chain(retriever, preferred_provider):
                             return data['choices'][0]['message']['content']
                         else:
                             raise Exception(f"DeepSeek API Error: {response.status_code} - {response.text}")
-                    
-                    # Crear un wrapper compatible con LangChain
-                    from langchain_core.language_models import BaseLanguageModel
-                    from langchain_core.messages import BaseMessage, HumanMessage
-                    from langchain_core.outputs import LLMResult
-                    from typing import List, Optional, Any, Dict
-                    
-                    class DeepSeekLLM(BaseLanguageModel):
-                        def __init__(self, invoke_func):
-                            super().__init__()
-                            self.invoke_func = invoke_func
-                        
-                        def _generate(self, messages: List[BaseMessage], stop: Optional[List[str]] = None, run_manager: Optional[Any] = None, **kwargs: Any) -> LLMResult:
-                            # Convertir mensajes a formato de la API
-                            api_messages = []
-                            for msg in messages:
-                                if isinstance(msg, HumanMessage):
-                                    api_messages.append({"role": "user", "content": msg.content})
-                                else:
-                                    api_messages.append({"role": "assistant", "content": msg.content})
-                            
-                            response = self.invoke_func(api_messages)
-                            
-                            # Crear generación
-                            from langchain_core.outputs import Generation
-                            generation = Generation(text=response)
-                            return LLMResult(generations=[[generation]])
-                        
-                        def _llm_type(self) -> str:
-                            return "deepseek"
-                        
-                        def invoke(self, input: Any, config: Optional[Dict[str, Any]] = None, **kwargs: Any) -> str:
-                            if isinstance(input, str):
-                                return self.invoke_func([{"role": "user", "content": input}])
-                            elif isinstance(input, list) and input and isinstance(input[0], BaseMessage):
-                                api_messages = []
-                                for msg in input:
-                                    if isinstance(msg, HumanMessage):
-                                        api_messages.append({"role": "user", "content": msg.content})
-                                    else:
-                                        api_messages.append({"role": "assistant", "content": msg.content})
-                                return self.invoke_func(api_messages)
-                            else:
-                                return str(input)
-                        
-                        async def ainvoke(self, input: Any, config: Optional[Dict[str, Any]] = None, **kwargs: Any) -> str:
-                            return self.invoke(input, config, **kwargs)
-                        
-                        def generate_prompt(self, messages: List[BaseMessage], stop: Optional[List[str]] = None, **kwargs: Any) -> str:
-                            """Generate prompt from messages."""
-                            if isinstance(messages, str):
-                                return messages
-                            elif isinstance(messages, list):
-                                return "\n".join(msg.content for msg in messages if hasattr(msg, 'content'))
-                            else:
-                                return str(messages)
-                        
-                        async def agenerate_prompt(self, messages: List[BaseMessage], stop: Optional[List[str]] = None, **kwargs: Any) -> str:
-                            """Async version of generate_prompt."""
-                            return self.generate_prompt(messages, stop, **kwargs)
                     
                     llm = DeepSeekLLM(deepseek_invoke)
                     provider_activo = "DeepSeek"
