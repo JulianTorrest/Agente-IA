@@ -256,13 +256,13 @@ def get_rag_chain(retriever, preferred_provider):
                     provider_activo = "Gemini (Capa Gratuita)"
                 elif provider == "DeepSeek" and st.secrets.get("DEEPSEEK_API_KEY"):
                     try:
-                        llm = ChatDeepSeek(api_key=st.secrets["DEEPSEEK_API_KEY"], model="deepseek-chat", temperature=0.7)
+                        llm = ChatDeepSeek(api_key=st.secrets["DEEPSEEK_API_KEY"], model="deepseek-chat", temperature=0.7, base_url="https://api.deepseek.com/v1")
                         provider_activo = "DeepSeek"
                     except Exception as e:
                         st.warning(f"Error específico con DeepSeek: {e}")
                         raise
                 elif provider == "OpenAI" and st.secrets.get("OPENAI_API_KEY"):
-                    llm = ChatOpenAI(api_key=st.secrets["OPENAI_API_KEY"], model="gpt-4o-mini", temperature=0.7)
+                    llm = ChatOpenAI(api_key=st.secrets["OPENAI_API_KEY"], model="gpt-4o-mini", temperature=0.7, base_url="https://api.openai.com/v1")
                     provider_activo = "OpenAI (GPT-4o-mini)"
             except Exception as e:
                 st.warning(f"No se pudo inicializar el proveedor '{provider}': {e}. Intentando con el siguiente.")
