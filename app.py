@@ -245,7 +245,7 @@ def get_rag_chain(retriever, preferred_provider):
                     llm = ChatGroq(groq_api_key=st.secrets["GROQ_API_KEY"], model_name="llama-3.3-70b-versatile")
                     provider_activo = "Groq (Llama3.3-70b)"
                 elif provider == "XAI" and st.secrets.get("XAI_API_KEY"):
-                    llm = ChatXAI(api_key=st.secrets["XAI_API_KEY"], model_name="grok-beta")
+                    llm = ChatOpenAI(api_key=st.secrets["XAI_API_KEY"], model="grok-beta", base_url="https://api.x.ai/v1")
                     provider_activo = "XAI (Grok-beta)"
                 elif provider == "Mistral" and st.secrets.get("MISTRAL_API_KEY"):
                     llm = ChatMistralAI(mistral_api_key=st.secrets["MISTRAL_API_KEY"], model="mistral-large-latest")
