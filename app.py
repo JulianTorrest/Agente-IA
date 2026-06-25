@@ -242,8 +242,8 @@ def get_rag_chain(retriever, preferred_provider):
             if llm: break # Si ya tenemos un LLM, salimos del bucle
             try:
                 if provider == "Groq" and st.secrets.get("GROQ_API_KEY"):
-                    llm = ChatGroq(groq_api_key=st.secrets["GROQ_API_KEY"], model_name="llama-3.1-70b-versatile")
-                    provider_activo = "Groq (Llama3.1-70b)"
+                    llm = ChatGroq(groq_api_key=st.secrets["GROQ_API_KEY"], model_name="llama-3.3-70b-versatile")
+                    provider_activo = "Groq (Llama3.3-70b)"
                 elif provider == "XAI" and st.secrets.get("XAI_API_KEY"):
                     llm = ChatXAI(api_key=st.secrets["XAI_API_KEY"], model_name="grok-1")
                     provider_activo = "XAI (Grok-1)"
@@ -254,7 +254,7 @@ def get_rag_chain(retriever, preferred_provider):
                     llm = ChatGoogleGenerativeAI(google_api_key=st.secrets["GEMINI_API_KEY"], model="gemini-1.5-flash", temperature=0.7)
                     provider_activo = "Gemini (Capa Gratuita)"
                 elif provider == "DeepSeek" and st.secrets.get("DEEPSEEK_API_KEY"):
-                    llm = ChatOpenAI(api_key=st.secrets["DEEPSEEK_API_KEY"], model="deepseek-chat", temperature=0.7, base_url="https://api.deepseek.com")
+                    llm = ChatOpenAI(api_key=st.secrets["DEEPSEEK_API_KEY"], model="deepseek-chat", temperature=0.7, base_url="https://api.deepseek.com/v1")
                     provider_activo = "DeepSeek"
                 elif provider == "OpenAI" and st.secrets.get("OPENAI_API_KEY"):
                     llm = ChatOpenAI(api_key=st.secrets["OPENAI_API_KEY"], model="gpt-4o-mini", temperature=0.7)
