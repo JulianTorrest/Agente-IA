@@ -286,6 +286,29 @@ def get_rag_chain(retriever, preferred_provider):
                     llm = ChatGoogleGenerativeAI(google_api_key=st.secrets["GEMINI_API_KEY"], model="gemini-1.5-flash", temperature=0.7)
                     provider_activo = "Gemini (Capa Gratuita)"
                 elif provider == "DeepSeek" and st.secrets.get("DEEPSEEK_API_KEY"):
+                    # Primero, probar la API key directamente
+                    def test_deepseek_api():
+                        test_url = "https://api.deepseek.com/v1/chat/completions"
+                        test_headers = {
+                            'Content-Type': 'application/json',
+                            'Authorization': f"Bearer {st.secrets['DEEPSEEK_API_KEY']}"
+                        }
+                        test_payload = {
+                            "model": "deepseek-chat",
+                            "messages": [{"role": "user", "content": "test"}],
+                            "max_tokens": 5
+                        }
+                        print(f"DEBUG: Probando API key de DeepSeek...")
+                        response = requests.post(test_url, headers=test_headers, json=test_payload, timeout=10)
+                        print(f"DEBUG: Test response status: {response.status_code}")
+                        print(f"DEBUG: Test response: {response.text}")
+                        return response.status_code == 200
+                    
+                    # Si la prueba falla, mostrar error claro y no continuar
+                    if not test_deepseek_api():
+                        st.error("🚨 La API key de DeepSeek falló la prueba de conexión. Verifica la API key o el saldo.")
+                        raise Exception("DeepSeek API key validation failed")
+                    
                     # Usar requests directo como en tu proyecto CAMACOL
                     def deepseek_invoke(messages):
                         print(f"DEBUG: Invocando DeepSeek con mensajes: {messages}")
