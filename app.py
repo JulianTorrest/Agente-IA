@@ -307,14 +307,17 @@ def get_rag_chain(retriever, preferred_provider):
                         }
                         print(f"DEBUG: Probando API key de DeepSeek...")
                         response = requests.post(test_url, headers=test_headers, json=test_payload, timeout=10)
-                        print(f"DEBUG: Test response status: {response.status_code}")
-                        print(f"DEBUG: Test response: {response.text}")
-                        return response.status_code == 200
+                        status_code = response.status_code
+                        body_text = response.text
+                        print(f"DEBUG: Test response status: {status_code}")
+                        print(f"DEBUG: Test response: {body_text}")
+                        return status_code, body_text
                     
                     # Si la prueba falla, mostrar error claro y no continuar
-                    if not test_deepseek_api():
-                        print("🚨 La API key de DeepSeek falló la prueba de conexión. Verifica la API key o el saldo.")
-                        raise Exception("DeepSeek API key validation failed")
+                    test_status, test_body = test_deepseek_api()
+                    if test_status != 200:
+                        print("🚨 La API key de DeepSeek falló la prueba de conexión.")
+                        raise Exception(f"DeepSeek validation failed. HTTP {test_status}: {test_body}")
                     
                     # Usar requests directo como en tu proyecto CAMACOL
                     def deepseek_invoke(messages):
