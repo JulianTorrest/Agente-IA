@@ -892,22 +892,23 @@ with tab6:
                             print(f"OpenAI RateLimitError. Reintentando en {wait_s}s (intento {attempt + 1}/3): {e}")
                             time.sleep(wait_s)
 
-                        if response_text is None:
-                            st.error(f"OpenAI: Rate limit (429) tras reintentos. Intenta de nuevo en 1-2 minutos. Detalle: {last_error}")
-                            st.stop()
-                        
-                        # Procesar para generar imágenes si se solicita
-                        image_tag_match = re.search(r"\[IMAGE:\s*(.*?)\]", response_text)
-                        if image_tag_match and st.secrets.get("GEMINI_API_KEY"):
-                            image_prompt = image_tag_match.group(1)
-                            # Limpiar el tag de la respuesta de texto
-                            response_text = re.sub(r"\[IMAGE:\s*(.*?)\]", "", response_text).strip()
-                            st.markdown(f"**Respuesta de {st.session_state.provider_activo}:**\n\n{response_text}")
-                            with st.spinner("Generando imagen..."):
-                                image_bytes = generate_image(image_prompt)
-                                if image_bytes:
-                                    st.image(image_bytes, caption=f"Ilustración para: '{image_prompt}'")
-                        else:
-                            st.markdown(f"**Respuesta de {st.session_state.provider_activo}:**\n\n{response_text}")
+                if response_text is None:
+                    st.error(f"El proveedor no respondió tras varios reintentos. Detalle: {last_error}")
+                    st.stop()
                 
+                # Procesar para generar imágenes si se solicita
+                image_tag_match = re.search(r"\[IMAGE:\s*(.*?)\]", response_text)
+                if image_tag_match and st.secrets.get("GEMINI_API_KEY"):
+                    image_prompt = image_tag_match.group(1)
+                    # Limpiar el tag de la respuesta de texto
+                    response_text_cleaned = re.sub(r"\[IMAGE:\s*(.*?)\]", "", response_text).strip()
+                    st.markdown(f"**Respuesta de {st.session_state.provider_activo}:**\n\n{response_text_cleaned}")
+                    with st.spinner("Generando imagen..."):
+                        image_bytes = generate_image(image_prompt)
+                        if image_bytes:
+                            st.image(image_bytes, caption=f"Ilustración para: '{image_prompt}'")
+                else:
+                    st.markdown(f"**Respuesta de {st.session_state.provider_activo}:**\n\n{response_text}")
+                
+                # Guardar la respuesta completa (con el tag de imagen si lo tuviera) en el historial
                 st.session_state.chat_history.append({"role": "assistant", "content": response_text})
